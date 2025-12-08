@@ -1,10 +1,11 @@
 <?php
 // app/Http/Controllers/ProductController.php
-// REPLACE file yang lama dengan ini (update bagian filter lokasi)
+// REPLACE dengan ini
 
 namespace App\Http\Controllers;
 
 use App\Models\Product;
+use App\Models\ProductImage;
 use App\Models\Category;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -12,34 +13,29 @@ use Illuminate\Support\Str;
 
 class ProductController extends Controller
 {
-    // Katalog produk (public - tidak perlu login)
     public function index(Request $request)
     {
-        $query = Product::with(['store', 'category', 'reviews.user']);
+        $query = Product::with(['store', 'category', 'reviews.user', 'images']);
 
-        // Filter berdasarkan nama toko
         if ($request->has('store_name')) {
             $query->whereHas('store', function ($q) use ($request) {
                 $q->where('name', 'like', '%' . $request->store_name . '%');
             });
         }
 
-        // Filter berdasarkan kategori
         if ($request->filled('category')) {
             $query->whereHas('category', function ($q) use ($request) {
                 $q->where('slug', $request->category);
             });
         }
 
-        // Filter berdasarkan lokasi toko (update: pic_city dan pic_province)
         if ($request->has('location')) {
             $query->whereHas('store', function ($q) use ($request) {
-                $q->where('pic_city', 'like', '%' . $request->location . '%')
-                  ->orWhere('pic_province', 'like', '%' . $request->location . '%');
+                $q->where('pic_city_name', 'like', '%' . $request->location . '%')
+                  ->orWhere('pic_province_name', 'like', '%' . $request->location . '%');
             });
         }
 
-        // Pencarian berdasarkan nama produk
         if ($request->has('search')) {
             $query->where('name', 'like', '%' . $request->search . '%');
         }
@@ -49,14 +45,13 @@ class ProductController extends Controller
         return response()->json($products);
     }
 
-    // Detail produk (public)
     public function show($id)
     {
-        $product = Product::with(['store', 'category', 'reviews.user'])->findOrFail($id);
+        $product = Product::with(['store', 'category', 'reviews.user', 'images'])->findOrFail($id);
         return response()->json($product);
     }
 
-    // Upload produk (seller only)
+    // Upload produk dengan multiple images
     public function store(Request $request)
     {
         $request->validate([
@@ -65,7 +60,8 @@ class ProductController extends Controller
             'price' => 'required|numeric|min:0',
             'stock' => 'required|integer|min:0',
             'category_id' => 'required|exists:categories,id',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'images' => 'required|array|min:1|max:5', // 1-5 gambar
+            'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
 
         $user = auth()->user();
@@ -74,11 +70,7 @@ class ProductController extends Controller
             return response()->json(['error' => 'Only sellers can create products'], 403);
         }
 
-        $imagePath = null;
-        if ($request->hasFile('image')) {
-            $imagePath = $request->file('image')->store('products', 'public');
-        }
-
+        // Create product
         $product = Product::create([
             'store_id' => $user->store->id,
             'category_id' => $request->category_id,
@@ -87,16 +79,28 @@ class ProductController extends Controller
             'description' => $request->description,
             'price' => $request->price,
             'stock' => $request->stock,
-            'image' => $imagePath,
         ]);
+
+        // Upload multiple images
+        if ($request->hasFile('images')) {
+            foreach ($request->file('images') as $index => $image) {
+                $imagePath = $image->store('products', 'public');
+                
+                ProductImage::create([
+                    'product_id' => $product->id,
+                    'image_path' => $imagePath,
+                    'display_order' => $index,
+                    'is_primary' => $index === 0, // First image is primary
+                ]);
+            }
+        }
 
         return response()->json([
             'message' => 'Product created successfully',
-            'product' => $product->load(['store', 'category']),
+            'product' => $product->load(['store', 'category', 'images']),
         ], 201);
     }
 
-    // Update produk (seller only)
     public function update(Request $request, $id)
     {
         $product = Product::findOrFail($id);
@@ -112,25 +116,39 @@ class ProductController extends Controller
             'price' => 'sometimes|numeric|min:0',
             'stock' => 'sometimes|integer|min:0',
             'category_id' => 'sometimes|exists:categories,id',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'images' => 'sometimes|array|max:5',
+            'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
 
-        if ($request->hasFile('image')) {
-            if ($product->image) {
-                Storage::disk('public')->delete($product->image);
-            }
-            $product->image = $request->file('image')->store('products', 'public');
-        }
+        $product->update($request->except('images'));
 
-        $product->update($request->except('image'));
+        // Handle new images if provided
+        if ($request->hasFile('images')) {
+            // Delete old images
+            foreach ($product->images as $oldImage) {
+                Storage::disk('public')->delete($oldImage->image_path);
+                $oldImage->delete();
+            }
+
+            // Upload new images
+            foreach ($request->file('images') as $index => $image) {
+                $imagePath = $image->store('products', 'public');
+                
+                ProductImage::create([
+                    'product_id' => $product->id,
+                    'image_path' => $imagePath,
+                    'display_order' => $index,
+                    'is_primary' => $index === 0,
+                ]);
+            }
+        }
 
         return response()->json([
             'message' => 'Product updated successfully',
-            'product' => $product->load(['store', 'category']),
+            'product' => $product->load(['store', 'category', 'images']),
         ]);
     }
 
-    // Hapus produk (seller only)
     public function destroy($id)
     {
         $product = Product::findOrFail($id);
@@ -140,8 +158,9 @@ class ProductController extends Controller
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
-        if ($product->image) {
-            Storage::disk('public')->delete($product->image);
+        // Delete images
+        foreach ($product->images as $image) {
+            Storage::disk('public')->delete($image->image_path);
         }
 
         $product->delete();

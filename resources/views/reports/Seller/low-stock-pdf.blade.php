@@ -41,9 +41,8 @@
 </head>
 <body>
     <div class="header">
-        <h1>⚠️ {{ $report_type }}</h1>
-        <p>Produk yang Perlu Segera Ditambah Stoknya</p>
-        <p>Digenerate pada: {{ $generated_at }}</p>
+        <h1>{{ $report_type }}</h1>
+        <p>Tanggal dibuat: {{ $generated_at }} oleh {{ $store->name }}</p>
     </div>
 
     <div class="alert">
@@ -51,42 +50,18 @@
         <p>Laporan ini menampilkan produk-produk dengan stok <strong>kurang dari 2 unit</strong> yang perlu segera ditambah untuk menghindari kehabisan stok.</p>
     </div>
 
-    <div class="store-info">
-        <h3>🏪 Informasi Toko</h3>
-        <p><strong>Nama Toko:</strong> {{ $store->name }}</p>
-        @if($store->description)
-            <p><strong>Deskripsi:</strong> {{ $store->description }}</p>
-        @endif
-        <p><strong>PIC:</strong> {{ $store->pic_name }}</p>
-        <p><strong>Kontak:</strong> {{ $store->pic_phone }} | {{ $store->pic_email }}</p>
-    </div>
+    
 
-    <div class="summary">
-        <div class="summary-item">
-            <strong>{{ $products->count() }}</strong>
-            <span>Produk Stok Menipis</span>
-        </div>
-        <div class="summary-item">
-            <strong>{{ $products->where('stock', '=', 0)->count() }}</strong>
-            <span>Stok 0 unit (HABIS)</span>
-        </div>
-        <div class="summary-item">
-            <strong>{{ $products->where('stock', '=', 1)->count() }}</strong>
-            <span>Stok 1 unit</span>
-        </div>
-    </div>
-
+    
     @if($products->count() > 0)
         <table>
             <thead>
                 <tr>
                     <th width="5%">No</th>
-                    <th width="30%">Nama Produk</th>
+                    <th width="30%">Produk</th>
                     <th width="15%">Kategori</th>
-                    <th width="12%">Stok</th>
-                    <th width="12%">Prioritas</th>
-                    <th width="13%">Rating</th>
-                    <th width="13%">Harga</th>
+                    <th width="12%">Harga</th>
+                    <th width="12%">Stock</th>
                 </tr>
             </thead>
             <tbody>
@@ -95,18 +70,10 @@
                         <td>{{ $index + 1 }}</td>
                         <td><strong>{{ $product->name }}</strong></td>
                         <td>{{ $product->category->name }}</td>
+                        <td>Rp {{ number_format($product->price, 0, ',', '.') }}</td>
                         <td>
                             <span class="stock-critical">{{ $product->stock }} unit</span>
                         </td>
-                        <td>
-                            @if($product->stock == 0)
-                                <span class="priority-badge priority-high">SEGERA</span>
-                            @else
-                                <span class="priority-badge priority-medium">TINGGI</span>
-                            @endif
-                        </td>
-                        <td>⭐ {{ number_format($product->rating, 2) }}</td>
-                        <td>Rp {{ number_format($product->price, 0, ',', '.') }}</td>
                     </tr>
                 @endforeach
             </tbody>

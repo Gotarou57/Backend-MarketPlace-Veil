@@ -138,8 +138,8 @@ class SellerDashboardController extends Controller
             $data = [
                 'store' => $store,
                 'products' => $products,
-                'report_type' => 'Laporan Stok Produk',
-                'generated_at' => now()->format('d/m/Y H:i:s'),
+                'report_type' => 'Laporan Daftar Produk Berdasarkan Stok',
+                'generated_at' => now()->format('d/m/Y'),
             ];
 
             // Generate HTML dari view
@@ -186,8 +186,8 @@ class SellerDashboardController extends Controller
             $data = [
                 'store' => $store,
                 'products' => $products,
-                'report_type' => 'Laporan Rating Produk',
-                'generated_at' => now()->format('d/m/Y H:i:s'),
+                'report_type' => 'Laporan Daftar Produk Berdasarkan Rating',
+                'generated_at' => now()->format('d/m/Y'),
             ];
 
             $html = view('reports.rating-pdf', $data)->render();
@@ -233,8 +233,8 @@ class SellerDashboardController extends Controller
             $data = [
                 'store' => $store,
                 'products' => $products,
-                'report_type' => 'Laporan Stok Menipis (Stok < 2)',
-                'generated_at' => now()->format('d/m/Y H:i:s'),
+                'report_type' => 'Laporan Daftar Produk Segera Dipesan',
+                'generated_at' => now()->format('d/m/Y'),
             ];
 
             $html = view('reports.low-stock-pdf', $data)->render();

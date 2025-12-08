@@ -14,84 +14,40 @@ class LocationSeeder extends Seeder
     public static function getLocations()
     {
         return [
-            // DKI Jakarta
-            'Jakarta Pusat',
-            'Jakarta Utara',
-            'Jakarta Barat',
-            'Jakarta Selatan',
-            'Jakarta Timur',
-            
-            // Jawa Barat
-            'Bandung',
-            'Bekasi',
-            'Bogor',
-            'Depok',
-            'Cirebon',
-            'Sukabumi',
-            'Tasikmalaya',
-            'Karawang',
-            'Purwakarta',
-            
-            // Jawa Tengah
-            'Semarang',
-            'Solo',
-            'Yogyakarta',
-            'Magelang',
-            'Salatiga',
-            'Pekalongan',
-            'Tegal',
-            'Purwokerto',
-            'Cilacap',
-            
-            // Jawa Timur
-            'Surabaya',
-            'Malang',
-            'Sidoarjo',
-            'Gresik',
-            'Mojokerto',
-            'Kediri',
-            'Blitar',
-            'Madiun',
-            'Pasuruan',
-            'Probolinggo',
-            'Jember',
-            'Banyuwangi',
-            
-            // Bali
-            'Denpasar',
-            'Badung',
-            'Gianyar',
-            'Tabanan',
-            
-            // Sumatera
-            'Medan',
-            'Palembang',
-            'Pekanbaru',
-            'Padang',
+            'Aceh',
+            'Sumatera Utara',
+            'Sumatera Barat',
+            'Riau',
             'Jambi',
+            'Sumatera Selatan',
             'Bengkulu',
-            'Bandar Lampung',
-            'Batam',
-            
-            // Kalimantan
-            'Balikpapan',
-            'Samarinda',
-            'Banjarmasin',
-            'Pontianak',
-            'Palangkaraya',
-            
-            // Sulawesi
-            'Makassar',
-            'Manado',
-            'Palu',
-            'Kendari',
+            'Lampung',
+            'Kepulauan Bangka Belitung',
+            'Kepulauan Riau',
+            'DKI Jakarta',
+            'Jawa Barat',
+            'Jawa Tengah',
+            'DI Yogyakarta',
+            'Jawa Timur',
+            'Banten',
+            'Bali',
+            'Nusa Tenggara Barat',
+            'Nusa Tenggara Timur',
+            'Kalimantan Barat',
+            'Kalimantan Tengah',
+            'Kalimantan Selatan',
+            'Kalimantan Timur',
+            'Kalimantan Utara',
+            'Sulawesi Utara',
+            'Sulawesi Tengah',
+            'Sulawesi Selatan',
+            'Sulawesi Tenggara',
             'Gorontalo',
-            
-            // Lainnya
-            'Mataram',
-            'Kupang',
-            'Ambon',
-            'Jayapura',
+            'Sulawesi Barat',
+            'Maluku',
+            'Maluku Utara',
+            'Papua',
+            'Papua Barat',
         ];
     }
 

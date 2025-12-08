@@ -1,12 +1,12 @@
 <?php
-// app/Http/Controllers/ReviewController.php
-// REPLACE file yang lama dengan ini
 
 namespace App\Http\Controllers;
 
 use App\Models\Review;
 use App\Models\Product;
+use App\Mail\ReviewThankYou;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 
 class ReviewController extends Controller
 {
@@ -33,12 +33,19 @@ class ReviewController extends Controller
 
         $request->validate($rules);
 
+        // Get product info untuk email
+        $product = Product::findOrFail($request->product_id);
+
         // Data review
         $reviewData = [
             'product_id' => $request->product_id,
             'rating' => $request->rating,
             'comment' => $request->comment,
         ];
+
+        // Variables untuk email
+        $reviewerName = '';
+        $reviewerEmail = '';
 
         if ($user) {
             // User yang login
@@ -52,6 +59,9 @@ class ReviewController extends Controller
             if ($existingReview) {
                 return response()->json(['error' => 'You have already reviewed this product'], 400);
             }
+
+            $reviewerName = $user->name;
+            $reviewerEmail = $user->email;
         } else {
             // Guest user
             $reviewData['guest_name'] = $request->guest_name;
@@ -67,13 +77,28 @@ class ReviewController extends Controller
             if ($existingReview) {
                 return response()->json(['error' => 'You have already reviewed this product with this email'], 400);
             }
+
+            $reviewerName = $request->guest_name;
+            $reviewerEmail = $request->guest_email;
         }
 
+        // Create review
         $review = Review::create($reviewData);
+
+        // Kirim email terima kasih
+        try {
+            Mail::to($reviewerEmail)->send(
+                new ReviewThankYou($reviewerName)
+            );
+        } catch (\Exception $e) {
+            \Log::error('Failed to send review thank you email: ' . $e->getMessage());
+            // Tetap lanjut meskipun email gagal
+        }
 
         return response()->json([
             'message' => 'Review created successfully',
             'review' => $review->load('user'),
+            'email_sent' => 'Email terima kasih telah dikirim ke ' . $reviewerEmail
         ], 201);
     }
 

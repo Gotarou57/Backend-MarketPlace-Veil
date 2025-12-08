@@ -34,49 +34,22 @@
 <body>
     <div class="header">
         <h1>{{ $report_type }}</h1>
-        <p>Diurutkan berdasarkan Rating (Tertinggi ke Terendah)</p>
-        <p>Digenerate pada: {{ $generated_at }}</p>
+        <p>Tanggal dibuat: {{ $generated_at }} oleh {{ $store->name }}</p>
     </div>
 
-    <div class="store-info">
-        <h3>🏪 Informasi Toko</h3>
-        <p><strong>Nama Toko:</strong> {{ $store->name }}</p>
-        @if($store->description)
-            <p><strong>Deskripsi:</strong> {{ $store->description }}</p>
-        @endif
-        <p><strong>PIC:</strong> {{ $store->pic_name }}</p>
-        <p><strong>Lokasi:</strong> {{ $store->pic_city }}, {{ $store->pic_province }}</p>
-    </div>
+    
 
-    <div class="summary">
-        <div class="summary-item">
-            <strong>{{ $products->count() }}</strong>
-            <span>Total Produk</span>
-        </div>
-        <div class="summary-item">
-            <strong>{{ number_format($products->avg('rating'), 1) }}</strong>
-            <span>Rating Rata-rata</span>
-        </div>
-        <div class="summary-item">
-            <strong>{{ $products->where('rating', '>=', 4)->count() }}</strong>
-            <span>Rating Tinggi (≥4)</span>
-        </div>
-        <div class="summary-item">
-            <strong>{{ $products->sum('review_count') }}</strong>
-            <span>Total Review</span>
-        </div>
-    </div>
 
     @if($products->count() > 0)
         <table>
             <thead>
                 <tr>
                     <th width="5%">No</th>
-                    <th width="35%">Nama Produk</th>
+                    <th width="35%">Produk</th>
                     <th width="15%">Kategori</th>
-                    <th width="15%">Rating</th>
+                    <th width="15%">Harga</th>
                     <th width="10%">Stok</th>
-                    <th width="20%">Harga</th>
+                    <th width="20%">Rating</th>
                 </tr>
             </thead>
             <tbody>
@@ -85,6 +58,8 @@
                         <td>{{ $index + 1 }}</td>
                         <td><strong>{{ $product->name }}</strong></td>
                         <td>{{ $product->category->name }}</td>
+                        <td>Rp {{ number_format($product->price, 0, ',', '.') }}</td>
+                        <td>{{ $product->stock }} unit</td>
                         <td>
                             <span class="rating-badge 
                                 @if($product->rating >= 4.5) rating-excellent
@@ -96,8 +71,6 @@
                                 ⭐ {{ number_format($product->rating, 2) }} ({{ $product->review_count }})
                             </span>
                         </td>
-                        <td>{{ $product->stock }} unit</td>
-                        <td>Rp {{ number_format($product->price, 0, ',', '.') }}</td>
                     </tr>
                 @endforeach
             </tbody>
@@ -108,9 +81,6 @@
         </div>
     @endif
 
-    <div class="footer">
-        <p>Laporan ini digenerate secara otomatis oleh sistem Marketplace</p>
-        <p>&copy; {{ date('Y') }} {{ $store->name }} - All Rights Reserved</p>
-    </div>
+    
 </body>
 </html>

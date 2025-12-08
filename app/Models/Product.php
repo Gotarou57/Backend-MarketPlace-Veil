@@ -1,5 +1,6 @@
 <?php
 // app/Models/Product.php
+// REPLACE dengan ini
 
 namespace App\Models;
 
@@ -18,7 +19,7 @@ class Product extends Model
         'description',
         'price',
         'stock',
-        'image',
+        'image', // Keep untuk backward compatibility
         'rating',
         'review_count',
     ];
@@ -41,6 +42,28 @@ class Product extends Model
     public function reviews()
     {
         return $this->hasMany(Review::class);
+    }
+
+    // BARU: Relationship dengan ProductImage
+    public function images()
+    {
+        return $this->hasMany(ProductImage::class)->orderBy('display_order');
+    }
+
+    // BARU: Get primary image
+    public function primaryImage()
+    {
+        return $this->hasOne(ProductImage::class)->where('is_primary', true);
+    }
+
+    // Helper: Get primary image URL
+    public function getPrimaryImageUrlAttribute()
+    {
+        $primaryImage = $this->primaryImage;
+        if ($primaryImage) {
+            return asset('storage/' . $primaryImage->image_path);
+        }
+        return null;
     }
 
     // Update rating produk
