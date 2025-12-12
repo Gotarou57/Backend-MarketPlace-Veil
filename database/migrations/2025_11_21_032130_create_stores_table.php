@@ -30,6 +30,10 @@ return new class extends Migration
             $table->string('pic_ktp_number')->nullable();
             $table->string('pic_photo')->nullable(); // Foto PIC
             $table->string('pic_ktp_file')->nullable(); // Upload file KTP
+            $table->enum('verification_status', ['pending', 'approved', 'rejected'])->default('pending');
+            $table->timestamp('verified_at')->nullable();
+            $table->foreignId('verified_by')->nullable()->constrained('users')->onDelete('set null');
+            $table->text('rejection_reason')->nullable();
             $table->timestamps();
         });
     }

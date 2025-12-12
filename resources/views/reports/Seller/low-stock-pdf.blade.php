@@ -45,11 +45,6 @@
         <p>Tanggal dibuat: {{ $generated_at }} oleh {{ $store->name }}</p>
     </div>
 
-    <div class="alert">
-        <h3>⚠️ PERHATIAN!</h3>
-        <p>Laporan ini menampilkan produk-produk dengan stok <strong>kurang dari 2 unit</strong> yang perlu segera ditambah untuk menghindari kehabisan stok.</p>
-    </div>
-
     
 
     
@@ -79,16 +74,6 @@
             </tbody>
         </table>
 
-        <div class="recommendation">
-            <h3>💡 Rekomendasi Tindakan</h3>
-            <ul>
-                <li>Segera tambah stok untuk produk dengan prioritas <strong>SEGERA</strong> (stok 0 unit)</li>
-                <li>Pertimbangkan menambah stok produk dengan rating tinggi terlebih dahulu</li>
-                <li>Hubungi supplier untuk pengadaan stok dalam jumlah yang sesuai</li>
-                <li>Lakukan monitoring berkala untuk mencegah kehabisan stok di masa depan</li>
-                <li>Set reminder untuk restock produk-produk populer</li>
-            </ul>
-        </div>
     @else
         <div class="safe-message">
             <h3>✅ Semua Produk Aman!</h3>

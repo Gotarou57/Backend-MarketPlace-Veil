@@ -1,6 +1,4 @@
 <?php
-// app/Http/Controllers/ProductController.php
-// REPLACE dengan ini
 
 namespace App\Http\Controllers;
 
@@ -40,6 +38,11 @@ class ProductController extends Controller
             $query->where('name', 'like', '%' . $request->search . '%');
         }
 
+        // BARU: Filter berdasarkan kondisi
+        if ($request->has('kondisi') && in_array($request->kondisi, ['Baru', 'Bekas'])) {
+            $query->where('kondisi', $request->kondisi);
+        }
+
         $products = $query->paginate(12);
 
         return response()->json($products);
@@ -60,8 +63,19 @@ class ProductController extends Controller
             'price' => 'required|numeric|min:0',
             'stock' => 'required|integer|min:0',
             'category_id' => 'required|exists:categories,id',
-            'images' => 'required|array|min:1|max:5', // 1-5 gambar
+            'images' => 'required|array|min:1|max:5',
             'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:2048',
+            'minimal_pemesanan' => 'required|integer|min:1',        // BARU
+            'berat_satuan' => 'required|integer|min:1',             // BARU
+            'kondisi' => 'required|in:Baru,Bekas',                  // BARU
+        ], [
+            // BARU: Custom error messages
+            'minimal_pemesanan.required' => 'Minimal pemesanan harus diisi',
+            'minimal_pemesanan.min' => 'Minimal pemesanan minimal 1',
+            'berat_satuan.required' => 'Berat satuan harus diisi',
+            'berat_satuan.min' => 'Berat satuan minimal 1 gram',
+            'kondisi.required' => 'Kondisi produk harus dipilih',
+            'kondisi.in' => 'Kondisi hanya boleh Baru atau Bekas',
         ]);
 
         $user = auth()->user();
@@ -79,6 +93,9 @@ class ProductController extends Controller
             'description' => $request->description,
             'price' => $request->price,
             'stock' => $request->stock,
+            'minimal_pemesanan' => $request->minimal_pemesanan,  // BARU
+            'berat_satuan' => $request->berat_satuan,            // BARU
+            'kondisi' => $request->kondisi,                      // BARU
         ]);
 
         // Upload multiple images
@@ -90,7 +107,7 @@ class ProductController extends Controller
                     'product_id' => $product->id,
                     'image_path' => $imagePath,
                     'display_order' => $index,
-                    'is_primary' => $index === 0, // First image is primary
+                    'is_primary' => $index === 0,
                 ]);
             }
         }
@@ -118,6 +135,14 @@ class ProductController extends Controller
             'category_id' => 'sometimes|exists:categories,id',
             'images' => 'sometimes|array|max:5',
             'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:2048',
+            'minimal_pemesanan' => 'sometimes|integer|min:1',      // BARU
+            'berat_satuan' => 'sometimes|integer|min:1',           // BARU
+            'kondisi' => 'sometimes|in:Baru,Bekas',                // BARU
+        ], [
+            // BARU: Custom error messages
+            'minimal_pemesanan.min' => 'Minimal pemesanan minimal 1',
+            'berat_satuan.min' => 'Berat satuan minimal 1 gram',
+            'kondisi.in' => 'Kondisi hanya boleh Baru atau Bekas',
         ]);
 
         $product->update($request->except('images'));

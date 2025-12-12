@@ -121,51 +121,82 @@ class SellerDashboardController extends Controller
 
     // BARU: Download Laporan Stok PDF
     public function downloadStockReport()
-    {
-        $user = auth()->user();
+{
+    \Log::info('SELLER REPORT HIT', [
+        'user' => auth()->user()->id ?? 'null',
+        'role' => auth()->user()->role ?? 'null'
+    ]);
 
-        if ($user->role !== 'seller' || !$user->store) {
-            return response()->json(['error' => 'Unauthorized'], 403);
-        }
+    $user = auth()->user();
 
-        try {
-            $store = $user->store;
-            $products = $store->products()
-                ->with('category')
-                ->orderBy('stock', 'desc')
-                ->get();
+    if ($user->role !== 'seller' || !$user->store) {
+        \Log::warning('SELLER REPORT UNAUTHORIZED', [
+            'user' => $user->id ?? 'null',
+            'has_store' => $user->store ? 'yes' : 'no'
+        ]);
 
-            $data = [
-                'store' => $store,
-                'products' => $products,
-                'report_type' => 'Laporan Daftar Produk Berdasarkan Stok',
-                'generated_at' => now()->format('d/m/Y'),
-            ];
-
-            // Generate HTML dari view
-            $html = view('reports.stock-pdf', $data)->render();
-
-            // Generate PDF menggunakan Browsershot
-            $pdf = Browsershot::html($html)
-                ->setOption('landscape', false)
-                ->margins(10, 10, 10, 10)
-                ->format('A4')
-                ->showBackground()
-                ->waitUntilNetworkIdle()
-                ->pdf();
-
-            $filename = 'laporan-stok-' . now()->format('Y-m-d') . '.pdf';
-
-            return Response::make($pdf, 200, [
-                'Content-Type' => 'application/pdf',
-                'Content-Disposition' => 'attachment; filename="' . $filename . '"',
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'error' => 'Gagal generate PDF: ' . $e->getMessage()
-            ], 500);
-        }
+        return response()->json(['error' => 'Unauthorized'], 403);
     }
+
+    try {
+        \Log::info('SELLER REPORT START PROCESS', [
+            'store_id' => $user->store->id,
+        ]);
+
+        $store = $user->store;
+        $products = $store->products()
+            ->with('category')
+            ->orderBy('stock', 'desc')
+            ->get();
+
+        \Log::info('SELLER REPORT PRODUCT COUNT', [
+            'count' => $products->count()
+        ]);
+
+        $data = [
+            'store' => $store,
+            'products' => $products,
+            'report_type' => 'Laporan Daftar Produk Berdasarkan Stok',
+            'generated_at' => now()->format('d/m/Y'),
+        ];
+
+        // Generate HTML dari view
+        $html = view('reports.seller.stock-pdf', $data)->render();
+
+        \Log::info('SELLER REPORT HTML GENERATED');
+
+        // Generate PDF menggunakan Browsershot
+        $pdf = Browsershot::html($html)
+            ->setOption('landscape', false)
+            ->margins(10, 10, 10, 10)
+            ->format('A4')
+            ->showBackground()
+            ->waitUntilNetworkIdle()
+            ->pdf();
+
+        \Log::info('SELLER REPORT PDF GENERATED');
+
+        $filename = 'laporan-stok-' . now()->format('Y-m-d') . '.pdf';
+
+        return Response::make($pdf, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ]);
+    } catch (\Exception $e) {
+
+        // LOG ERROR SANGAT DETAIL
+        \Log::error('SELLER REPORT ERROR', [
+            'message' => $e->getMessage(),
+            'file'    => $e->getFile(),
+            'line'    => $e->getLine(),
+            'trace'   => $e->getTraceAsString()
+        ]);
+
+        return response()->json([
+            'error' => 'Gagal generate PDF: ' . $e->getMessage()
+        ], 500);
+    }
+}
 
     // BARU: Download Laporan Rating PDF
     public function downloadRatingReport()
@@ -190,7 +221,7 @@ class SellerDashboardController extends Controller
                 'generated_at' => now()->format('d/m/Y'),
             ];
 
-            $html = view('reports.rating-pdf', $data)->render();
+            $html = view('reports.seller.rating-pdf', $data)->render();
 
             $pdf = Browsershot::html($html)
                 ->setOption('landscape', false)
@@ -237,7 +268,7 @@ class SellerDashboardController extends Controller
                 'generated_at' => now()->format('d/m/Y'),
             ];
 
-            $html = view('reports.low-stock-pdf', $data)->render();
+            $html = view('reports.seller.low-stock-pdf', $data)->render();
 
             $pdf = Browsershot::html($html)
                 ->setOption('landscape', false)

@@ -64,7 +64,7 @@
                             </span>
                         </td>
                         <td>{{ $product->store->name }}</td>
-                        <td>{{ $product->store->pic_province_name }}</td>
+                        <td>{{ $product->guest_location }}</td>
                     </tr>
                 @endforeach
             </tbody>

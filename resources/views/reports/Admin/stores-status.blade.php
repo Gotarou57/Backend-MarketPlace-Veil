@@ -54,7 +54,7 @@
         });
         
         // Urutkan berdasarkan status (opsional)
-        $combined_stores = $combined_stores->sortBy('name')->values();
+        $combined_stores = $combined_stores->sortBy('status')->values();
     @endphp
 
     @if($combined_stores->count() > 0)

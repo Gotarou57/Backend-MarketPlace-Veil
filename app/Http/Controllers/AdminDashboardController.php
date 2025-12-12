@@ -155,9 +155,22 @@ class AdminDashboardController extends Controller
         }
 
         try {
-            $products = Product::with(['store', 'category'])
-                ->orderBy('rating', 'desc')
+            $reviews = Review::with(['product.store', 'product.category', 'product.reviews'])
+                ->orderBy('guest_location', 'asc')
                 ->get();
+
+            $products = $reviews->map(function ($review) {
+                $product = $review->product;
+                return (object) [
+                    'name' => $product->name,
+                    'category' => $product->category,
+                    'price' => $product->price,
+                    'rating' => $review->rating,
+                    'review_count' => $product->reviews->count(),
+                    'store' => $product->store,
+                    'guest_location' => $review->guest_location,
+                ];
+            });
 
             $data = [
                 'products' => $products,

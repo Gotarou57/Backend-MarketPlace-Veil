@@ -23,7 +23,7 @@
 </head>
 <body>
     <div class="header">
-        <h1>Laporan Daftar Toko Seluruh Provinsi</h1>
+        <h1>Laporan Daftar Toko Berdasarkan Lokasi Provinsi</h1>
         <p>Tanggal dibuat: {{ $generated_at }} oleh Admin</p>
     </div>
 
