@@ -1,4 +1,6 @@
 <?php
+// app/Http/Controllers/AuthController.php
+// REPLACE method register dengan yang ini
 
 namespace App\Http\Controllers;
 
@@ -15,7 +17,7 @@ use Illuminate\Support\Str;
 
 class AuthController extends Controller
 {
-    // Register dengan auto verifikasi email
+    // Register dengan PENDING status (menunggu verifikasi admin)
     public function register(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -47,55 +49,31 @@ class AuthController extends Controller
             'pic_ktp_file' => 'required|image|mimes:jpeg,png,jpg|max:2048',
         ]);
 
-        // Jika validasi gagal - REJECT
+        // Jika validasi gagal
         if ($validator->fails()) {
-            $missingFields = array_keys($validator->errors()->toArray());
-            $errorMessages = $validator->errors()->all();
-
-            // Kirim email rejection
-            try {
-                Mail::to($request->pic_email)->send(
-                    new SellerRegistrationRejected(
-                        $request->pic_name,
-                        $request->store_name,
-                        $missingFields,
-                        $errorMessages
-                    )
-                );
-            } catch (\Exception $e) {
-                \Log::error('Failed to send rejection email: ' . $e->getMessage());
-            }
-
             return response()->json([
                 'success' => false,
-                'message' => 'Registrasi ditolak. Data tidak lengkap atau tidak valid.',
+                'message' => 'Data tidak valid. Mohon periksa kembali form registrasi Anda.',
                 'errors' => $validator->errors(),
-                'email_sent' => 'Email penolakan telah dikirim ke ' . $request->pic_email
             ], 422);
         }
 
         try {
-            // Generate username otomatis (akan menggunakan method helper dari User model)
-            $generatedUsername = User::generateUsername($request->pic_email);
-            
-            // Generate password otomatis (random 10 karakter: huruf + angka)
-            $generatedPassword = $this->generateSecurePassword();
-
             // Upload files
             $picPhotoPath = $request->file('pic_photo')->store('stores/pic_photos', 'public');
             $ktpFilePath = $request->file('pic_ktp_file')->store('stores/ktp_files', 'public');
 
-            // Create user dengan credentials yang di-generate
+            // Create user dengan status BELUM AKTIF (belum bisa login)
             $user = User::create([
                 'name' => $request->name ?? $request->pic_name,
                 'email' => $request->email ?? $request->pic_email,
-                'password' => Hash::make($generatedPassword),
+                'password' => Hash::make(Str::random(16)), // Password sementara random
                 'role' => 'seller',
                 'phone' => $request->phone ?? $request->pic_phone,
                 'address' => $request->address ?? $request->pic_street,
             ]);
 
-            // Create store dengan status approved
+            // Create store dengan status PENDING
             $store = Store::create([
                 'user_id' => $user->id,
                 'name' => $request->store_name,
@@ -116,38 +94,19 @@ class AuthController extends Controller
                 'pic_ktp_number' => $request->pic_ktp_number,
                 'pic_photo' => $picPhotoPath,
                 'pic_ktp_file' => $ktpFilePath,
-                'verification_status' => 'approved',
-                'verified_at' => now(),
+                'verification_status' => 'pending', // STATUS PENDING
+                'verified_at' => null,
+                'verified_by' => null,
             ]);
-
-            // Kirim email approval dengan username & password
-            try {
-                Mail::to($user->email)->send(
-                    new SellerRegistrationApproved(
-                        $user->name,
-                        $store->name,
-                        $generatedUsername,
-                        $generatedPassword
-                    )
-                );
-            } catch (\Exception $e) {
-                \Log::error('Failed to send approval email: ' . $e->getMessage());
-                // Tetap lanjut meskipun email gagal
-            }
-
-            // Auto login user
-            $token = auth()->login($user);
 
             return response()->json([
                 'success' => true,
-                'message' => 'Registrasi berhasil! Silakan cek email Anda untuk username dan password.',
-                'user' => $user->load('store'),
-                'token' => $token,
-                'credentials' => [
-                    'username' => $generatedUsername,
-                    'note' => 'Password telah dikirim ke email Anda'
-                ],
-                'email_sent' => 'Email approval telah dikirim ke ' . $user->email
+                'message' => 'Registrasi berhasil! Silakan menunggu verifikasi dari admin. Anda akan menerima email setelah akun Anda diverifikasi.',
+                'data' => [
+                    'store_name' => $store->name,
+                    'pic_email' => $store->pic_email,
+                    'status' => 'pending_verification'
+                ]
             ], 201);
 
         } catch (\Exception $e) {
@@ -172,29 +131,7 @@ class AuthController extends Controller
         }
     }
 
-    /**
-     * Generate secure random password
-     * Format: 10 karakter (huruf besar, huruf kecil, angka)
-     */
-    private function generateSecurePassword($length = 10)
-    {
-        $uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-        $lowercase = 'abcdefghijklmnopqrstuvwxyz';
-        $numbers = '0123456789';
-        
-        $password = '';
-        $password .= $uppercase[rand(0, strlen($uppercase) - 1)]; // Min 1 uppercase
-        $password .= $lowercase[rand(0, strlen($lowercase) - 1)]; // Min 1 lowercase
-        $password .= $numbers[rand(0, strlen($numbers) - 1)]; // Min 1 number
-        
-        $allChars = $uppercase . $lowercase . $numbers;
-        for ($i = 3; $i < $length; $i++) {
-            $password .= $allChars[rand(0, strlen($allChars) - 1)];
-        }
-        
-        return str_shuffle($password);
-    }
-
+    // LOGIN - Cek status verifikasi
     public function login(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -214,6 +151,25 @@ class AuthController extends Controller
 
         $user = auth()->user();
         $user->load('store');
+
+        // BARU: Cek status verifikasi untuk seller
+        if ($user->isSeller() && $user->store) {
+            if ($user->store->isPending()) {
+                auth()->logout();
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Akun Anda masih dalam proses verifikasi oleh admin. Silakan tunggu email konfirmasi.'
+                ], 403);
+            }
+
+            if ($user->store->isRejected()) {
+                auth()->logout();
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Akun Anda ditolak oleh admin. Alasan: ' . ($user->store->rejection_reason ?? 'Tidak ada alasan yang diberikan.')
+                ], 403);
+            }
+        }
 
         return response()->json([
             'message' => 'Login successful',
@@ -238,5 +194,28 @@ class AuthController extends Controller
         return response()->json([
             'token' => auth()->refresh(),
         ]);
+    }
+
+    /**
+     * Generate secure random password
+     * Format: 10 karakter (huruf besar, huruf kecil, angka)
+     */
+    private function generateSecurePassword($length = 10)
+    {
+        $uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        $lowercase = 'abcdefghijklmnopqrstuvwxyz';
+        $numbers = '0123456789';
+        
+        $password = '';
+        $password .= $uppercase[rand(0, strlen($uppercase) - 1)]; // Min 1 uppercase
+        $password .= $lowercase[rand(0, strlen($lowercase) - 1)]; // Min 1 lowercase
+        $password .= $numbers[rand(0, strlen($numbers) - 1)]; // Min 1 number
+        
+        $allChars = $uppercase . $lowercase . $numbers;
+        for ($i = 3; $i < $length; $i++) {
+            $password .= $allChars[rand(0, strlen($allChars) - 1)];
+        }
+        
+        return str_shuffle($password);
     }
 }
